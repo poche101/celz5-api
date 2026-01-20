@@ -19,6 +19,7 @@ return new class extends Migration
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password')->nullable(); // Nullable for KingsChat users
+            $table->string('role')->default('user');
 
             // Additional Profile Info
             $table->date('birthday')->nullable();

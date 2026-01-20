@@ -24,6 +24,7 @@ class User extends Authenticatable
         'kingschat_id',
         'unique_id',
         'profile_picture',
+        'role',
     ];
 
     protected $hidden = [
