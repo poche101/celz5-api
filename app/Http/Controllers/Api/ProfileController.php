@@ -13,21 +13,20 @@ class ProfileController extends Controller
      * Get the authenticated user's profile with QR code
      */
     public function getProfile(Request $request)
-    {
-        $user = $request->user();
+{
+    $user = $request->user();
 
-        // Generate QR code based on the unique_id
-        // We return it as a Base64 string so the mobile app can display it easily
-        $qrCode = QrCode::format('png')
-                        ->size(300)
-                        ->margin(1)
-                        ->generate($user->unique_id);
+    // Change format from 'png' to 'svg'
+    $qrCode = QrCode::format('svg') 
+                    ->size(300)
+                    ->generate($user->unique_id ?? 'NO-ID');
 
-        return response()->json([
-            'user' => $user,
-            'qr_code_base64' => 'data:image/png;base64,' . base64_encode($qrCode)
-        ]);
-    }
+    return response()->json([
+        'user' => $user,
+        // Update the mime type to image/svg+xml
+        'qr_code_base64' => 'data:image/svg+xml;base64,' . base64_encode($qrCode)
+    ]);
+}
 
     /**
      * Update profile details and upload profile picture
