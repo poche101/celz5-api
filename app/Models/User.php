@@ -11,6 +11,7 @@ use Illuminate\Support\Str;
 class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
+    use HasApiTokens, Notifiable;
 
     protected $fillable = [
         'title',
@@ -32,6 +33,11 @@ class User extends Authenticatable
         'remember_token',
     ];
 
+    // Relationship to comments
+     public function comments() {
+    return $this->hasMany(Comment::class);
+}
+
     // This automatically generates the Unique ID when a user is created
     protected static function booted()
     {
@@ -41,4 +47,9 @@ class User extends Authenticatable
             }
         });
     }
+
+    public function payments()
+{
+    return $this->hasMany(Payment::class);
+}
 }

@@ -11,11 +11,16 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
-    ->withMiddleware(function (Middleware $middleware): void {
+    ->withMiddleware(function (Middleware $middleware) {
+        // 1. Enable Sanctum for API requests
+        $middleware->statefulApi();
+
+        // 2. Register your custom Middleware aliases
         $middleware->alias([
-        'is_admin' => \App\Http\Middleware::class,
-    ]);
+            'is_admin' => \App\Http\Middleware\AdminMiddleware::class, // Ensure this points to your actual file
+        ]);
     })
-    ->withExceptions(function (Exceptions $exceptions): void {
+    ->withExceptions(function (Exceptions $exceptions) {
         //
-    })->create();
+    })
+    ->create();
