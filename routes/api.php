@@ -6,15 +6,19 @@ use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\StreamController;
 use App\Http\Controllers\Api\ChurchController;
 use App\Http\Controllers\Api\PaymentController;
+use App\Http\Controllers\Api\TestimonyController; // Added
 use App\Http\Controllers\Api\Admin\UserController;
 use App\Http\Controllers\Api\Admin\VideoController;
 use App\Http\Controllers\Api\Admin\AdminStreamController;
 use App\Http\Controllers\Api\Admin\PaymentController as AdminPaymentController;
 use App\Http\Controllers\Api\Admin\PaymentSettingController;
-
-
+use App\Http\Controllers\Api\Admin\AdminTestimonyController; // Added
 
 Route::prefix('v1')->group(function () {
+
+    // --- User Testimony Submission (Floating Chat) ---
+    Route::post('/submit-testimony', [TestimonyController::class, 'submitForm'])
+        ->middleware('auth:sanctum');
 
     // --- 1. Public Routes ---
     Route::post('/register', [AuthController::class, 'register']);
@@ -46,8 +50,8 @@ Route::prefix('v1')->group(function () {
             Route::get('/saved-cards', function() {
                 return auth()->user()->cards;
             });
-
-        Route::post('/payments/webhook', [PaymentController::class, 'handleWebhook'])->name('api.payments.webhook');
+            // Fixed naming inside the group
+            Route::post('/webhook', [PaymentController::class, 'handleWebhook'])->name('api.payments.webhook');
         });
 
         // --- 3. Admin Dashboard Routes (Admin Only) ---
@@ -67,12 +71,24 @@ Route::prefix('v1')->group(function () {
             Route::delete('/comments/{id}', [AdminStreamController::class, 'deleteComment']);
 
             // Payment Management
-            Route::get('/payments', [PaymentController::class, 'index']);
-            Route::get('/payments/stats', [PaymentController::class, 'stats']);
-            Route::patch('/payments/{id}/status', [PaymentController::class, 'updateStatus']);
+            Route::get('/payments', [AdminPaymentController::class, 'index']); // Used Alias
+            Route::get('/payments/stats', [AdminPaymentController::class, 'stats']);
+            Route::patch('/payments/{id}/status', [AdminPaymentController::class, 'updateStatus']);
 
             Route::get('/payment-settings', [PaymentSettingController::class, 'index']);
             Route::post('/payment-settings', [PaymentSettingController::class, 'update']);
+
+            // --- Admin Testimony Management ---
+            Route::prefix('testimonies')->group(function () {
+                Route::get('/', [AdminTestimonyController::class, 'index']);
+                Route::post('/', [AdminTestimonyController::class, 'store']);
+                Route::put('/{id}', [AdminTestimonyController::class, 'update']);
+                Route::delete('/{id}', [AdminTestimonyController::class, 'destroy']);
+
+                // Export Routes
+                Route::get('/export/excel', [AdminTestimonyController::class, 'downloadExcel']);
+                Route::get('/export/word', [AdminTestimonyController::class, 'downloadWord']);
+            });
         });
     });
 });
