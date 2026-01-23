@@ -9,36 +9,37 @@ use App\Models\PaymentSetting;
 use App\Services\ExpressPayService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
 
 class PaymentController extends Controller
 {
+    /**
+     * Set up middleware for the controller.
+     */
     public function __construct()
     {
-        // Redirects to login automatically if no Bearer token is present
+        // Ensure user is logged in via Sanctum for all routes except the webhook
         $this->middleware('auth:sanctum')->except('handleWebhook');
+
+        // Ensure user has completed their profile (Church, Group, Cell) before paying/saving cards
+        $this->middleware('profile_complete')->except('handleWebhook');
     }
 
+    /**
+     * Initiate a payment via ExpressPay.
+     */
     public function initiatePayment(Request $request, ExpressPayService $expressPay)
     {
         $user = $request->user();
 
-        // 1. Check if profile is incomplete (Redirect logic for Frontend)
-        if (empty($user->church) || empty($user->group) || empty($user->cell)) {
-            return response()->json([
-                'status' => 'profile_incomplete',
-                'message' => 'Please update your profile details (Church, Group, Cell) before making a payment.',
-                'user' => $user
-            ], 403);
-        }
-
-        // 2. Validate Input
+        // 1. Validate Input
         $request->validate([
             'amount' => 'required|numeric|min:1',
             'type' => 'required|in:offering,tithe,partnership',
             'card_token' => 'nullable|string',
         ]);
 
-        // 2. Fetch Admin Configuration
+        // 2. Fetch Admin Configuration for the specific giving type
         $settings = PaymentSetting::where('giving_type', $request->type)
             ->where('is_active', true)
             ->first();
@@ -73,6 +74,9 @@ class PaymentController extends Controller
         ]);
     }
 
+    /**
+     * Save a card token for future one-click payments.
+     */
     public function saveCard(Request $request)
     {
         $request->validate([
@@ -89,16 +93,21 @@ class PaymentController extends Controller
         return response()->json(['message' => 'Card saved for future payments']);
     }
 
+    /**
+     * Handle incoming webhooks from ExpressPay.
+     */
     public function handleWebhook(Request $request)
     {
-        \Log::info('ExpressPay Webhook Received:', $request->all());
+        Log::info('ExpressPay Webhook Received:', $request->all());
 
+        // Order ID usually maps to our transaction_reference
         $payment = Payment::where('transaction_reference', $request->order_id)->first();
 
         if (!$payment) {
             return response()->json(['message' => 'Transaction not found'], 404);
         }
 
+        // Check the result code (assuming '00' is success based on your previous code)
         if ($request->result_code == '00') {
             $payment->update(['status' => 'success']);
         } else {
