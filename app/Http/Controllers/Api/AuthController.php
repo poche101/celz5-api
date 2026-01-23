@@ -14,35 +14,26 @@ use Illuminate\Support\Str;
 class AuthController extends Controller
 {
     /**
-     * Handle manual user registration
+     * Handle manual user registration (Simplified)
      */
     public function register(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'title'     => 'required|string|max:10',
             'full_name' => 'required|string|max:255',
             'email'     => 'required|string|email|max:255|unique:users',
+            'phone'     => 'required|string|max:20|unique:users',
             'password'  => 'required|string|min:8',
-            'birthday'  => 'required|date',
-            'group'     => 'required|string',
-            'church'    => 'required|string',
-            'cell'      => 'required|string',
         ]);
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        // unique_id is handled by User Model booted() method
         $user = User::create([
-            'title'     => $request->title,
             'name'      => $request->full_name,
             'email'     => $request->email,
+            'phone'     => $request->phone,
             'password'  => Hash::make($request->password),
-            'birthday'  => $request->birthday,
-            'group'     => $request->group,
-            'church'    => $request->church,
-            'cell'      => $request->cell,
         ]);
 
         $token = $user->createToken('auth_token')->plainTextToken;
@@ -56,7 +47,7 @@ class AuthController extends Controller
     }
 
     /**
-     * Handle manual login via email and password
+     * Handle manual login
      */
     public function login(Request $request)
     {
@@ -81,12 +72,40 @@ class AuthController extends Controller
     }
 
     /**
+     * Update additional profile information
+     */
+    public function updateProfile(Request $request)
+    {
+        $user = $request->user(); // Requires 'auth:sanctum' middleware
+
+        $validator = Validator::make($request->all(), [
+            'title'    => 'nullable|string|max:10',
+            'birthday' => 'nullable|date',
+            'group'    => 'nullable|string',
+            'church'   => 'nullable|string',
+            'cell'     => 'nullable|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $user->update($request->only([
+            'title', 'birthday', 'group', 'church', 'cell'
+        ]));
+
+        return response()->json([
+            'message' => 'Profile updated successfully',
+            'user' => $user
+        ]);
+    }
+
+    /**
      * Handles the login/callback from KingsChat OAuth
      */
     public function handleKingsChatCallback(Request $request)
     {
         try {
-            // Mobile app sends code/token to this endpoint
             $kcUser = Socialite::driver('kingschat')->user();
 
             $user = User::updateOrCreate(
@@ -94,14 +113,13 @@ class AuthController extends Controller
                 [
                     'name'  => $kcUser->getName(),
                     'email' => $kcUser->getEmail(),
-                    // Profile picture from KingsChat can be saved here if provided
                     'profile_picture' => $kcUser->getAvatar(),
                 ]
             );
 
             $token = $user->createToken('auth_token')->plainTextToken;
 
-            // Check if profile needs more info (Church, Cell, Group, etc)
+            // Check if profile needs more info
             $is_incomplete = empty($user->cell) || empty($user->church) || empty($user->group);
 
             return response()->json([

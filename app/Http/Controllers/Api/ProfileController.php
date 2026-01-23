@@ -17,7 +17,7 @@ class ProfileController extends Controller
     $user = $request->user();
 
     // Change format from 'png' to 'svg'
-    $qrCode = QrCode::format('svg') 
+    $qrCode = QrCode::format('svg')
                     ->size(300)
                     ->generate($user->unique_id ?? 'NO-ID');
 

@@ -10,15 +10,30 @@ use Illuminate\Http\Request;
 
 class StreamController extends Controller
 {
+    /**
+     * Protect the entire controller
+     * Only logged-in users (via Sanctum) can access these methods
+     */
+    public function __construct()
+    {
+        $this->middleware('auth:sanctum');
+    }
+
     // 1. Enter Stream (Handles Name & Attendance)
     public function enterStream(Request $request, $programId)
     {
+        // Because of the middleware, $user is guaranteed to exist here
         $user = $request->user();
 
-        // If user hasn't set a display name yet, require it
+        // If user hasn't set a display name yet, use their registered name as default
+        // or require them to provide one.
         if (!$user->stream_display_name) {
-            $request->validate(['display_name' => 'required|string|max:255']);
-            $user->update(['stream_display_name' => $request->display_name]);
+            if ($request->has('display_name')) {
+                $user->update(['stream_display_name' => $request->display_name]);
+            } else {
+                // Default to their full name if no display name is provided yet
+                $user->update(['stream_display_name' => $user->name]);
+            }
         }
 
         // Record Attendance (Once per program)
@@ -50,6 +65,9 @@ class StreamController extends Controller
             'program_id' => $programId,
             'message' => $request->message
         ]);
+
+        // Load user info for immediate UI update
+        $comment->load('user:id,name,stream_display_name,profile_picture');
 
         return response()->json(['message' => 'Comment posted', 'comment' => $comment]);
     }

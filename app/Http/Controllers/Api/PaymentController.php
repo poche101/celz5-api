@@ -5,23 +5,40 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Payment;
 use App\Models\UserCard;
-use App\Models\PaymentSetting; // Added to fetch Admin settings
+use App\Models\PaymentSetting;
 use App\Services\ExpressPayService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
 class PaymentController extends Controller
 {
+    public function __construct()
+    {
+        // Redirects to login automatically if no Bearer token is present
+        $this->middleware('auth:sanctum')->except('handleWebhook');
+    }
+
     public function initiatePayment(Request $request, ExpressPayService $expressPay)
     {
-        // 1. Validate Input
+        $user = $request->user();
+
+        // 1. Check if profile is incomplete (Redirect logic for Frontend)
+        if (empty($user->church) || empty($user->group) || empty($user->cell)) {
+            return response()->json([
+                'status' => 'profile_incomplete',
+                'message' => 'Please update your profile details (Church, Group, Cell) before making a payment.',
+                'user' => $user
+            ], 403);
+        }
+
+        // 2. Validate Input
         $request->validate([
             'amount' => 'required|numeric|min:1',
             'type' => 'required|in:offering,tithe,partnership',
             'card_token' => 'nullable|string',
         ]);
 
-        // 2. Fetch Admin Configuration for this Giving Type
+        // 2. Fetch Admin Configuration
         $settings = PaymentSetting::where('giving_type', $request->type)
             ->where('is_active', true)
             ->first();
@@ -37,17 +54,15 @@ class PaymentController extends Controller
 
         // 3. Create the Database Record
         $payment = Payment::create([
-            'user_id' => auth()->id(),
+            'user_id' => $user->id,
             'amount' => $request->amount,
             'type' => $request->type,
             'transaction_reference' => $reference,
             'status' => 'pending',
-            // We store which merchant account this was intended for
             'merchant_id' => $settings->merchant_id
         ]);
 
         // 4. Process via ExpressPay Service
-        // We pass the dynamic settings (like merchant_id) to the service
         $response = $expressPay->processPayment($payment, $request->card_token, $settings);
 
         return response()->json([
@@ -75,28 +90,21 @@ class PaymentController extends Controller
     }
 
     public function handleWebhook(Request $request)
-{
-    // 1. Log the incoming data (Crucial for debugging payments)
-    \Log::info('ExpressPay Webhook Received:', $request->all());
+    {
+        \Log::info('ExpressPay Webhook Received:', $request->all());
 
-    // 2. Locate the transaction in your database
-    $payment = Payment::where('transaction_reference', $request->order_id)->first();
+        $payment = Payment::where('transaction_reference', $request->order_id)->first();
 
-    if (!$payment) {
-        return response()->json(['message' => 'Transaction not found'], 404);
+        if (!$payment) {
+            return response()->json(['message' => 'Transaction not found'], 404);
+        }
+
+        if ($request->result_code == '00') {
+            $payment->update(['status' => 'success']);
+        } else {
+            $payment->update(['status' => 'failed']);
+        }
+
+        return response()->json(['status' => 'acknowledged']);
     }
-
-    // 3. Update based on ExpressPay status code (assuming '00' is success)
-    if ($request->result_code == '00') {
-        $payment->update(['status' => 'success']);
-
-        // You could trigger an event here:
-        // event(new GivingReceived($payment));
-    } else {
-        $payment->update(['status' => 'failed']);
-    }
-
-    // 4. Always return a 200 OK so ExpressPay knows you got the message
-    return response()->json(['status' => 'acknowledged']);
-}
 }
