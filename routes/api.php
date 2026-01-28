@@ -12,19 +12,22 @@ use App\Http\Controllers\Api\Admin\VideoController;
 use App\Http\Controllers\Api\Admin\AdminStreamController;
 use App\Http\Controllers\Api\Admin\PaymentController as AdminPaymentController;
 use App\Http\Controllers\Api\Admin\PaymentSettingController;
-<<<<<<< HEAD
 use App\Http\Controllers\Api\Admin\AdminTestimonyController;
-=======
 use App\Http\Controllers\Api\Admin\AdminTestimonyController; // Added
 use App\Http\Controllers\Api\Calendar\CalendarEventController;
 use App\Http\Controllers\Api\Calendar\CalendarSubscriptionController;
 use App\Http\Controllers\Api\Calendar\CalendarStatsController;
+use App\Http\Controllers\Api\EventRegistrationController;
 use App\Models\CalendarEvent;
 use App\Models\CalendarSubscription;
 use App\Services\CalendarSubscriptionService;
->>>>>>> e8dfa53c6023d8b15a99061dc7768e3332ecd356
+
 
 Route::prefix('v1')->group(function () {
+
+   // routes/api.php
+
+    Route::post('/register-event', [EventRegistrationController::class, 'store']);
 
     // --- 1. Public Routes ---
     Route::post('/register', [AuthController::class, 'register']);
@@ -65,12 +68,10 @@ Route::prefix('v1')->group(function () {
             });
         });
 
-<<<<<<< HEAD
         // --- 4. Admin Dashboard Routes (Admin Only) ---
-=======
         // Calendar Events
         Route::prefix('calendar')->group(function () {
-            
+
             // Calendar Events
             Route::get('/events', [CalendarEventController::class, 'index']);
             Route::get('/events/upcoming', [CalendarEventController::class, 'upcoming']);
@@ -78,14 +79,14 @@ Route::prefix('v1')->group(function () {
             Route::get('/events/{event}', [CalendarEventController::class, 'show']);
             Route::put('/events/{event}', [CalendarEventController::class, 'update']);
             Route::delete('/events/{event}', [CalendarEventController::class, 'destroy']);
-            
+
             // Event Export
             Route::get('/events/{event}/export', [CalendarEventController::class, 'export']);
-            
+
             // Event Images
             Route::post('/events/{event}/images', [CalendarEventController::class, 'uploadImage']);
             Route::patch('/events/{event}/images/{image}/primary', [CalendarEventController::class, 'setPrimaryImage']);
-            
+
             // Event Subscriptions (shared calendars)
             Route::prefix('events/{event}')->group(function () {
                 Route::get('/subscriptions', [CalendarSubscriptionController::class, 'index']);
@@ -94,12 +95,12 @@ Route::prefix('v1')->group(function () {
                 Route::delete('/subscriptions/{subscription}', [CalendarSubscriptionController::class, 'destroy']);
                 Route::post('/subscriptions/invite', [CalendarSubscriptionController::class, 'invite']);
             });
-            
+
             // Calendar Statistics
             Route::get('/stats', [CalendarStatsController::class, 'index']);
             Route::get('/stats/upcoming', [CalendarStatsController::class, 'upcoming']);
             Route::get('/stats/busy-days', [CalendarStatsController::class, 'busyDays']);
-            
+
             // Calendar Statistics Routes
             Route::prefix('stats')->group(function () {
                 Route::get('/', [CalendarStatsController::class, 'index']);
@@ -119,13 +120,13 @@ Route::prefix('v1')->group(function () {
                 Route::get('/status', [CalendarStatsController::class, 'statusStats']);
                 Route::get('/custom', [CalendarStatsController::class, 'custom']);
                 Route::get('/export', [CalendarStatsController::class, 'export']);
-                
+
                 // Admin only stats
                 Route::middleware('is_admin')->group(function () {
                     Route::get('/admin', [CalendarStatsController::class, 'adminStats']);
                 });
             });
-            
+
             // Subscription routes
             Route::prefix('events/{event}/subscriptions')->group(function () {
                 Route::get('/', [CalendarSubscriptionController::class, 'index']);
@@ -133,7 +134,7 @@ Route::prefix('v1')->group(function () {
                 Route::put('/bulk', [CalendarSubscriptionController::class, 'bulkUpdate']);
                 Route::delete('/bulk', [CalendarSubscriptionController::class, 'bulkDestroy']);
                 Route::post('/invite', [CalendarSubscriptionController::class, 'invite']);
-                
+
                 Route::prefix('{subscription}')->group(function () {
                     Route::get('/', function (CalendarEvent $event, CalendarSubscription $subscription) {
                         return app(CalendarSubscriptionController::class)->show($event, $subscription);
@@ -144,7 +145,7 @@ Route::prefix('v1')->group(function () {
                     Route::post('/decline', [CalendarSubscriptionController::class, 'decline']);
                 });
             });
-            
+
             // User's subscription routes
             Route::prefix('my-subscriptions')->group(function () {
                 Route::get('/', [CalendarSubscriptionController::class, 'userSubscriptions']);
@@ -165,13 +166,13 @@ Route::prefix('v1')->group(function () {
                     ]);
                 });
             });
-            
+
             // Check subscription status
             Route::get('/events/{event}/check-subscription', [CalendarSubscriptionController::class, 'checkSubscription']);
         });
 
         // --- 3. Admin Dashboard Routes (Admin Only) ---
->>>>>>> e8dfa53c6023d8b15a99061dc7768e3332ecd356
+
         Route::middleware('is_admin')->prefix('admin')->group(function () {
 
             // User Management
