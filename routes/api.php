@@ -13,7 +13,6 @@ use App\Http\Controllers\Api\Admin\AdminStreamController;
 use App\Http\Controllers\Api\Admin\PaymentController as AdminPaymentController;
 use App\Http\Controllers\Api\Admin\PaymentSettingController;
 use App\Http\Controllers\Api\Admin\AdminTestimonyController;
-use App\Http\Controllers\Api\Admin\AdminTestimonyController; // Added
 use App\Http\Controllers\Api\Calendar\CalendarEventController;
 use App\Http\Controllers\Api\Calendar\CalendarSubscriptionController;
 use App\Http\Controllers\Api\Calendar\CalendarStatsController;
@@ -26,7 +25,6 @@ use App\Services\CalendarSubscriptionService;
 Route::prefix('v1')->group(function () {
 
    // routes/api.php
-
     Route::post('/register-event', [EventRegistrationController::class, 'store']);
 
     // --- 1. Public Routes ---
